@@ -9,7 +9,7 @@ class AccountController {
 
   async reset() {
     await AccountModel.deleteMany({});
-    return { body: true, status: 200 };
+    return { body: "OK", status: 200 };
   }
 
   /**
@@ -21,33 +21,33 @@ class AccountController {
   async getBalance(
     id: string
   ): Promise<{ body: number | { id: string; balance: number }; status: Response["statusCode"]; error?: string }> {
-    const account = (await AccountModel.findOne({ id })) as { id: string; balance: number };
+    const account = await AccountModel.findOne({ id });
     if (!account) {
       return { error: "Account does not exist", body: 0, status: 404 };
     }
-    return { body: account, status: 200 };
+    return { body: account.toObject(), status: 200 };
   }
 
   /**
    * Deposit an amount to a given account.
-   * @param id - The account id.
+   * @param destination - The account id.
    * @param amount - The amount to deposit.
    * @returns - The updated account.
    */
 
   async deposit({
-    id,
+    destination,
     amount,
   }: {
-    id: string;
+    destination: string;
     amount: number;
-  }): Promise<{ body: { id: string; balance: number }; status: Response["statusCode"] }> {
-    const doesAccountExist = await AccountModel.exists({ id });
-    const account = (await AccountModel.findOneAndUpdate({ id }, { $inc: { balance: amount } }, { new: true, upsert: true })) as {
-      id: string;
-      balance: number;
-    };
-    return { body: account, status: doesAccountExist ? 200 : 201 };
+  }): Promise<{ body: { destination: { id: string; balance: number } }; status: Response["statusCode"] }> {
+    const account = await AccountModel.findOneAndUpdate(
+      { id: destination },
+      { $inc: { balance: amount } },
+      { new: true, upsert: true }
+    );
+    return { body: { destination: account.toObject() }, status: 201 };
   }
 
   /**
@@ -59,25 +59,25 @@ class AccountController {
    */
 
   async withdraw({
-    id,
+    origin,
     amount,
   }: {
-    id: string;
+    origin: string;
     amount: number;
-  }): Promise<{ body: { id: string; balance: number } | number; status: Response["statusCode"]; error?: string }> {
-    const account = await AccountModel.findOne({ id });
+  }): Promise<{ body: { origin: { id: string; balance: number } } | number; status: Response["statusCode"]; error?: string }> {
+    const account = await AccountModel.findOne({ id: origin });
     if (!account) {
       return { error: "Account does not exist", body: 0, status: 404 };
     }
     if (account?.balance < amount) {
-      return { error: "Insufficient funds", body: account, status: 400 };
+      return { error: "Insufficient funds", body: { origin: account.toObject() }, status: 400 };
     }
-    const accountWithNewBalance = (await AccountModel.findOneAndUpdate(
-      { id },
-      { $inc: { balance: -amount } },
-      { new: true }
-    )) as { id: string; balance: number };
-    return { body: accountWithNewBalance, status: 200 };
+
+    const updatedAccount = (
+      await AccountModel.findOneAndUpdate({ id: origin }, { $inc: { balance: -amount } }, { new: true })
+    )?.toObject();
+    if (!updatedAccount) return { body: 0, status: 500, error: "An error occurred while withdrawing funds" };
+    return { body: { origin: updatedAccount }, status: 201 };
   }
 
   private async rollback({
@@ -102,34 +102,33 @@ class AccountController {
     body:
       | { origin: { id: string; balance: number }; destination: { id: string; balance: number } }
       | number
-      | { id: string; balance: number };
+      | { origin: { id: string; balance: number } };
     error?: string;
     status: Response["statusCode"];
   }> {
-    const originAccount = await AccountModel.findOne({ id: origin });
+    const originAccount = (await AccountModel.findOne({ id: origin }))?.toObject();
     if (!originAccount) {
       return { error: "Origin account does not exist.", body: 0, status: 404 };
     }
     if (originAccount.balance < amount) {
-      return { error: "Insufficient funds", body: originAccount, status: 400 };
+      return { error: "Insufficient funds", body: { origin: originAccount }, status: 400 };
     }
     try {
-      const originAccountWithNewBalance = (await AccountModel.findOneAndUpdate(
-        { id: origin },
-        { $inc: { balance: -amount } },
-        { new: true }
-      )) as { id: string; balance: number };
-      try {
-        const destinationAccountWithNewBalance = (await AccountModel.findOneAndUpdate(
-          { id: destination },
-          { $inc: { balance: amount } },
-          { new: true }
-        )) as { id: string; balance: number };
-        return { body: { origin: originAccountWithNewBalance, destination: destinationAccountWithNewBalance }, status: 200 };
-      } catch (err) {
-        await this.rollback({ id: origin, amount });
-        return { error: "An error occurred while transferring funds", body: 0, status: 500 };
+      const originAccountWithNewBalance = (
+        await AccountModel.findOneAndUpdate({ id: origin }, { $inc: { balance: -amount } }, { new: true })
+      )?.toObject();
+      if (originAccountWithNewBalance) {
+        try {
+          const destinationAccountWithNewBalance = (
+            await AccountModel.findOneAndUpdate({ id: destination }, { $inc: { balance: amount } }, { new: true, upsert: true })
+          ).toObject();
+          return { body: { origin: originAccountWithNewBalance, destination: destinationAccountWithNewBalance }, status: 201 };
+        } catch (err) {
+          await this.rollback({ id: origin, amount });
+          return { error: "An error occurred while transferring funds", body: 0, status: 500 };
+        }
       }
+      return { body: 0, status: 500, error: "An error occurred while transferring funds" };
     } catch (err) {
       return { error: "An error occurred while transferring funds", body: 0, status: 500 };
     }

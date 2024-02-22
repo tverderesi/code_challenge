@@ -36,7 +36,7 @@ describe("AccountController", () => {
 
       expect(insertedAccounts.length).toBe(2);
       const response = await accountController.reset();
-      expect(response).toStrictEqual({ body: true, status: 200 });
+      expect(response).toStrictEqual({ body: "OK", status: 200 });
       const accountsAfterReset = await AccountModel.find({});
       expect(accountsAfterReset.length).toBe(0);
     });
@@ -71,22 +71,22 @@ describe("AccountController", () => {
           balance: 100,
         },
       ]);
-      const response = (await accountController.deposit({ id: "1", amount: 100 })) as {
-        body: { id: string; balance: number };
+      const response = (await accountController.deposit({ destination: "1", amount: 100 })) as {
+        body: { destination: { id: string; balance: number } };
         status: number;
       };
 
-      expect(response.body.id).toBe("1");
-      expect(response.body.balance).toBe(200);
-      expect(response.status).toBe(200);
+      expect(response.body.destination.id).toBe("1");
+      expect(response.body.destination.balance).toBe(200);
+      expect(response.status).toBe(201);
     });
     it("should create an account and deposit money into it if the account does not exist", async () => {
-      const response = (await accountController.deposit({ id: "2", amount: 100 })) as {
-        body: { id: string; balance: number };
+      const response = (await accountController.deposit({ destination: "2", amount: 100 })) as {
+        body: { destination: { id: string; balance: number } };
         status: number;
       };
-      expect(response.body.id).toBe("2");
-      expect(response.body.balance).toBe(100);
+      expect(response.body.destination.id).toBe("2");
+      expect(response.body.destination.balance).toBe(100);
       expect(response.status).toBe(201);
     });
   });
@@ -100,17 +100,18 @@ describe("AccountController", () => {
         },
       ]);
 
-      const response = (await accountController.withdraw({ id: "1", amount: 50 })) as {
-        body: { id: string; balance: number };
+      const response = (await accountController.withdraw({ origin: "1", amount: 50 })) as {
+        body: { origin: { id: string; balance: number } };
         status: number;
       };
-      expect(response.body.id).toBe("1");
-      expect(response.body.balance).toBe(50);
-      expect(response.status).toBe(200);
+
+      expect(response.body.origin.id).toBe("1");
+      expect(response.body.origin.balance).toBe(50);
+      expect(response.status).toBe(201);
     });
 
     it("should return an error if the account does not exist", async () => {
-      const response = await accountController.withdraw({ id: "3", amount: 50 });
+      const response = await accountController.withdraw({ origin: "3", amount: 50 });
       expect(response.body).toBe(0);
       expect(response.status).toBe(404);
       expect(response.error).toBe("Account does not exist");
@@ -124,14 +125,14 @@ describe("AccountController", () => {
         },
       ]);
 
-      const response = (await accountController.withdraw({ id: "1", amount: 150 })) as {
-        body: { id: string; balance: number };
+      const response = (await accountController.withdraw({ origin: "1", amount: 150 })) as {
+        body: { origin: { id: string; balance: number } };
         status: number;
         error?: string;
       };
 
-      expect(response.body.id).toBe("1");
-      expect(response.body.balance).toBe(100);
+      expect(response.body.origin.id).toBe("1");
+      expect(response.body.origin.balance).toBe(100);
       expect(response.status).toBe(400);
       expect(response.error).toBe("Insufficient funds");
     });
@@ -158,7 +159,7 @@ describe("AccountController", () => {
       expect(response.body.origin.balance).toBe(50);
       expect(response.body.destination.id).toBe("2");
       expect(response.body.destination.balance).toBe(150);
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
     });
     it("should return an error if the origin account does not exist", async () => {
       await AccountModel.insertMany([
@@ -186,12 +187,12 @@ describe("AccountController", () => {
       ]);
 
       const response = (await accountController.transfer({ origin: "1", destination: "2", amount: 150 })) as {
-        body: { id: string; balance: number };
+        body: { origin: { id: string; balance: number } };
         status: number;
         error?: string;
       };
-      expect(response.body.id).toBe("1");
-      expect(response.body.balance).toBe(100);
+      expect(response.body.origin.id).toBe("1");
+      expect(response.body.origin.balance).toBe(100);
       expect(response.status).toBe(400);
       expect(response.error).toBe("Insufficient funds");
     });
