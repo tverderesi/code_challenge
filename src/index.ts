@@ -2,8 +2,9 @@ import express from "express";
 import router from "./routes";
 import mongoMemServer from "./db";
 import mongoose from "mongoose";
+import bodyParser from "body-parser";
 const app = express();
-
+app.use(bodyParser.json());
 app.use(router);
 
 (async () => {
