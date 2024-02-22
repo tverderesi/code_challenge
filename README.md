@@ -11,7 +11,7 @@ I chose to use the MVC design pattern, I have modeled an `AccountModel` using [m
 ## Developemnt Flow
 **Disclamer**: If you are not reading this from this project's github page, it is highly recommended that you open the [issues page](https://github.com/tverderesi/code_challenge/issues) from the project, as the commits are linked to github issues.
 
-I opted to use a method marginal to TDD, but instead of writing the codes before I have written the code, I decided to write then along the code, to ensure maximum coverage. I wrote tests for the Model, the connection to the database, and the controller. I opted not to write code for the routing layer because [https://ipkiss.pragmazero.com](https://ipkiss.pragmazero.com) would do the same codes I have wrriten. After I have scaffolded the project on the `main` branch and created my [task list](https://github.com/tverderesi/code_challenge/issues/1), my development flow followed the following algorithm:
+I opted to use a method marginal to TDD, but instead of writing the codes before I have written the code, I decided to write then along the code, to ensure maximum coverage. I wrote tests for the Model, the connection to the database, and the controller. I opted not to write code for the routing layer because [https://ipkiss.pragmazero.com](https://ipkiss.pragmazero.com) would do the same tests as the code I have wrriten. After I have scaffolded the project on the `main` branch and created my [task list](https://github.com/tverderesi/code_challenge/issues/1), my development flow followed the following algorithm:
 
 1. Plan the feature or document the bug in [GitHub issues](https://github.com/tverderesi/code_challenge/issues);
 2. create a branch for each code or feature that was documented;
